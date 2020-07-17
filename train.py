@@ -273,9 +273,13 @@ if __name__ == '__main__':
                         required=False, help='Distributed group name')
     parser.add_argument('--hparams', type=str,
                         required=False, help='comma separated name=value pairs')
+    parser.add_argument('--config', type=str,
+                        required=True,
+                        help='json or yaml config file to overwrite hparams, '
+                        'you must specify the alphabets file to init symbols')
 
     args = parser.parse_args()
-    hparams = create_hparams(args.hparams)
+    hparams = create_hparams(args.hparams, config_path=args.config)
 
     torch.backends.cudnn.enabled = hparams.cudnn_enabled
     torch.backends.cudnn.benchmark = hparams.cudnn_benchmark

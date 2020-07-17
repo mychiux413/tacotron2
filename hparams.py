@@ -1,8 +1,11 @@
 import tensorflow as tf
-from text import symbols
+import yaml
+import json
+import os
+from text.symbols import read_symbols
 
 
-def create_hparams(hparams_string=None, verbose=False):
+def create_hparams(hparams_string=None, verbose=False, config_path=None):
     """Create model hyperparameters. Parse nondefault from given string."""
 
     hparams = tf.contrib.training.HParams(
@@ -44,7 +47,9 @@ def create_hparams(hparams_string=None, verbose=False):
         ################################
         # Model Parameters             #
         ################################
-        n_symbols=len(symbols),
+        alphabets='',
+        symbols=[''],  # symbols must be specified by alphabets file
+        n_symbols=0,  # n_symbols is determined by alphabets file
         symbols_embedding_dim=512,
 
         # Encoder parameters
@@ -85,6 +90,17 @@ def create_hparams(hparams_string=None, verbose=False):
         mask_padding=True  # set model's padded outputs to padded values
     )
 
+    if config_path is not None:
+        assert os.path.exists(config_path)
+        config = {}
+        if config_path.endswith('.json'):
+            config = json.load(open(config_path))
+        if config_path.endswith('.yaml'):
+            config = yaml.load(open(config_path), yaml.FullLoader)
+
+        for key, value in config.items():
+            setattr(hparams, key, value)
+
     if hparams_string:
         tf.logging.info('Parsing command line hparams: %s', hparams_string)
         hparams.parse(hparams_string)
@@ -92,4 +108,9 @@ def create_hparams(hparams_string=None, verbose=False):
     if verbose:
         tf.logging.info('Final parsed hparams: %s', hparams.values())
 
+    # /**** Prepare symbols ****
+    symbols = read_symbols(hparams.alphabets)
+    hparams.symbols = symbols
+    hparams.n_symbols = len(symbols)
+    # **************************
     return hparams

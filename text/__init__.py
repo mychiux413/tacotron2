@@ -66,8 +66,8 @@ class TextConv:
             text = cleaner(text)
         return text
 
-    def _symbols_to_sequence(self):
-        return [_symbol_to_id[s] for s in self.symbols if _should_keep_symbol(s)]
+    def _symbols_to_sequence(self, symbols):
+        return [self._symbol_to_id[s] for s in symbols if self._should_keep_symbol(s)]
 
     def _arpabet_to_sequence(self, text):
         return self._symbols_to_sequence(['@' + s for s in text.split()])

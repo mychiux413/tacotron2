@@ -98,19 +98,18 @@ def create_hparams(hparams_string=None, verbose=False, config_path=None):
         if config_path.endswith('.yaml'):
             config = yaml.load(open(config_path), yaml.FullLoader)
 
-        for key, value in config.items():
-            setattr(hparams, key, value)
+        hparams.override_from_dict(config)
 
     if hparams_string:
         tf.logging.info('Parsing command line hparams: %s', hparams_string)
         hparams.parse(hparams_string)
-
-    if verbose:
-        tf.logging.info('Final parsed hparams: %s', hparams.values())
 
     # /**** Prepare symbols ****
     symbols = read_symbols(hparams.alphabets)
     hparams.symbols = symbols
     hparams.n_symbols = len(symbols)
     # **************************
+
+    if verbose:
+        tf.logging.info('Final parsed hparams: %s', hparams.values())
     return hparams

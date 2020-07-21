@@ -470,6 +470,20 @@ class Tacotron2(nn.Module):
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
 
+    @classmethod
+    def from_model(cls, model_path):
+        checkpoint_dict = torch.load(model_path)
+        assert 'hparams' in checkpoint_dict, \
+            'dict key `hparams` not found in model: {}'.format(
+                model_path
+            )
+        hparams = checkpoint_dict['hparams']
+        model = cls(hparams)
+        model.load_state_dict(checkpoint_dict['state_dict'])
+        print('restore model from hparams:')
+        print(hparams.values())
+        return model        
+
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, \
             output_lengths = batch

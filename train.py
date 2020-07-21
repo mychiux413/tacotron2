@@ -104,19 +104,28 @@ def load_checkpoint(checkpoint_path, model, optimizer):
     optimizer.load_state_dict(checkpoint_dict['optimizer'])
     learning_rate = checkpoint_dict['learning_rate']
     iteration = checkpoint_dict['iteration']
+    hparams = checkpoint_dict['hparams']
     print("Loaded checkpoint '{}' from iteration {}" .format(
         checkpoint_path, iteration))
-    return model, optimizer, learning_rate, iteration
+    return model, optimizer, learning_rate, iteration, hparams
 
 
-def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
+def save_checkpoint(model, optimizer, learning_rate, iteration, hparams, filepath):
     print("Saving model and optimizer state at iteration {} to {}".format(
         iteration, filepath))
     torch.save({'iteration': iteration,
                 'state_dict': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
-                'learning_rate': learning_rate}, filepath)
+                'learning_rate': learning_rate,
+                'hparams': hparams}, filepath)
 
+
+def save_model(model, hparams, filepath):
+    print("Saving model to {}".format(filepath))
+    torch.save({
+        'state_dict': model.state_dict(),
+        'hparams': hparams,
+    }, filepath)
 
 def validate(model, criterion, valset, iteration, batch_size, n_gpus,
              collate_fn, logger, distributed_run, rank):
@@ -193,7 +202,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
             model = warm_start_model(
                 checkpoint_path, model, hparams.ignore_layers)
         else:
-            model, optimizer, _learning_rate, iteration = load_checkpoint(
+            model, optimizer, _learning_rate, iteration, _ = load_checkpoint(
                 checkpoint_path, model, optimizer)
             if hparams.use_saved_learning_rate:
                 learning_rate = _learning_rate
@@ -250,7 +259,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                     checkpoint_path = os.path.join(
                         output_directory, "checkpoint_{}".format(iteration))
                     save_checkpoint(model, optimizer, learning_rate, iteration,
-                                    checkpoint_path)
+                                    hparams, checkpoint_path)
 
             iteration += 1
 
@@ -277,9 +286,20 @@ if __name__ == '__main__':
                         required=True,
                         help='json or yaml config file to overwrite hparams, '
                         'you must specify the alphabets file to init symbols')
+    parser.add_argument('--use_model_hparams', default=False,
+                        action='store_true',
+                        help='Whether to use hparams in checkpoint')
 
     args = parser.parse_args()
+
     hparams = create_hparams(args.hparams, config_path=args.config)
+    if os.path.exists(args.checkpoint_path) and args.use_model_hparams:
+        
+        checkpoint_dict = torch.load(args.checkpoint_path, map_location='cpu')
+        if 'hparams' in checkpoint_dict:
+            print('Use hparams from model: {}'.format(args.checkpoint_path))
+            hparams = checkpoint_dict['hparams']
+            print(hparams.values())
 
     torch.backends.cudnn.enabled = hparams.cudnn_enabled
     torch.backends.cudnn.benchmark = hparams.cudnn_benchmark
